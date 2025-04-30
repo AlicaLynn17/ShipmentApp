@@ -45,7 +45,10 @@ export class HomePage {
         this.scannedResult = result.content;
         console.log('Scanned Result:', this.scannedResult);
 
-        // Navigate to details after scanning
+        // Parse the scanned content
+        this.parseScannedInfo(this.scannedResult);
+
+        // Navigate to details after parsing
         this.navigateToDetails();
       } else {
         console.warn('No content found in the scanned QR code');
@@ -54,6 +57,22 @@ export class HomePage {
       console.error('Scan failed:', error);
     } finally {
       this.stopScanner();
+    }
+  }
+
+  parseScannedInfo(content: string) {
+    try {
+      // Example: Parse JSON content from the QR code
+      const parsedData = JSON.parse(content);
+      console.log('Parsed Data:', parsedData);
+
+      // You can now use the parsed data (e.g., save it, display it, etc.)
+      // Example: Extract specific fields
+      if (parsedData.shipmentId) {
+        console.log('Shipment ID:', parsedData.shipmentId);
+      }
+    } catch (error) {
+      console.error('Failed to parse scanned content:', error);
     }
   }
 
@@ -69,16 +88,43 @@ export class HomePage {
 
   navigateToDetails() {
     if (this.scannedResult) {
-      console.log('Navigating to index2.html with shipmentId:', this.scannedResult);
-      // Use URL encoding for spaces
-      window.location.href = `http://localhost:8080/index2.html?shipmentId=${this.scannedResult}`;
+      console.log('Navigating to index2.html with scanned data:', this.scannedResult);
+
+      try {
+        // Decode the scanned result to handle nested or encoded parameters
+        let decodedResult = decodeURIComponent(this.scannedResult);
+        const urlParams = new URLSearchParams(decodedResult);
+        let shipmentId = urlParams.get('shipmentId');
+
+        // Handle cases where shipmentId itself contains encoded parameters
+        while (shipmentId && (shipmentId.includes('%3F') || shipmentId.includes('%3D'))) {
+          shipmentId = decodeURIComponent(shipmentId);
+          const nestedParams = new URLSearchParams(shipmentId);
+          shipmentId = nestedParams.get('shipmentId') || shipmentId;
+        }
+
+        if (shipmentId) {
+          // Construct the URL with the extracted shipmentId
+          const baseUrl = 'http://localhost:8080/index2.html';
+          const url = new URL(baseUrl);
+          url.searchParams.set('shipmentId', shipmentId);
+
+          // Navigate to the constructed URL
+          window.location.href = url.toString();
+        } else {
+          console.error('No valid shipmentId found in the scanned data.');
+        }
+      } catch (error) {
+        console.error('Failed to process scanned result:', error);
+      }
     } else {
       console.error('No scanned result to navigate with');
     }
   }
 
   fetchHtmlContent(fileName: string) {
-    const fileUrl = `/path/to/your/folder/${fileName}`; // Update the path
+    // Construct the URL properly without duplicating query parameters
+    const fileUrl = `http://localhost:8080/${fileName}`;
     this.http.get(fileUrl, { responseType: 'text' }).subscribe(
       (htmlContent) => {
         console.log(`HTML content of ${fileName}:`, htmlContent);
