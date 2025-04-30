@@ -62,17 +62,17 @@ export class HomePage {
 
   parseScannedInfo(content: string) {
     try {
-      // Example: Parse JSON content from the QR code
+      // Attempt to parse content as JSON
       const parsedData = JSON.parse(content);
       console.log('Parsed Data:', parsedData);
 
-      // You can now use the parsed data (e.g., save it, display it, etc.)
       // Example: Extract specific fields
       if (parsedData.shipmentId) {
         console.log('Shipment ID:', parsedData.shipmentId);
       }
     } catch (error) {
-      console.error('Failed to parse scanned content:', error);
+      console.warn('Scanned content is not JSON. Treating as plain text:', content);
+      // If content is not JSON, log it as plain text
     }
   }
 
@@ -91,16 +91,17 @@ export class HomePage {
       console.log('Navigating to index2.html with scanned data:', this.scannedResult);
 
       try {
-        // Decode the scanned result to handle nested or encoded parameters
-        let decodedResult = decodeURIComponent(this.scannedResult);
-        const urlParams = new URLSearchParams(decodedResult);
-        let shipmentId = urlParams.get('shipmentId');
+        let shipmentId: string | null = null;
 
-        // Handle cases where shipmentId itself contains encoded parameters
-        while (shipmentId && (shipmentId.includes('%3F') || shipmentId.includes('%3D'))) {
-          shipmentId = decodeURIComponent(shipmentId);
-          const nestedParams = new URLSearchParams(shipmentId);
-          shipmentId = nestedParams.get('shipmentId') || shipmentId;
+        // Check if the scanned result is JSON
+        if (this.scannedResult.trim().startsWith('{')) {
+          const parsedData = JSON.parse(this.scannedResult);
+          shipmentId = parsedData.id || null; // Extract `id` as `shipmentId`
+        } else {
+          // Handle query string format
+          const decodedResult = decodeURIComponent(this.scannedResult);
+          const urlParams = new URLSearchParams(decodedResult);
+          shipmentId = urlParams.get('shipmentId');
         }
 
         if (shipmentId) {
